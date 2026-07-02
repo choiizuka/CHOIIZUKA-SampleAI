@@ -3,15 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CHOIIZUKA-AI Sample</title>
+  <title>CHOIIZUKA-AI</title>
   <style>
+    /* =======================================================
+       🎨 テーマ変数定義（引き算の美学：CSSだけでモードを制御）
+       ======================================================= */
+    
+    /* 1. 標準（初期値）はOSの設定に合わせる：自動ライトモード */
     :root {
+      --bg-color: #ffffff;
+      --chat-bg: #f8f9fa;
+      --text-color: #212529;
+      --accent-color: #007bff;
+      --border-color: #dee2e6;
+      --user-msg-bg: #007bff;
+      --user-msg-text: #ffffff;
+    }
+
+    /* 2. OSの設定がダークモードの場合、自動でこちらを適用 */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1a1a1a;
+        --chat-bg: #2d2d2d;
+        --text-color: #ffffff;
+        --border-color: #444444;
+        --user-msg-bg: #007bff;
+        --user-msg-text: #ffffff;
+      }
+    }
+
+    /* 3. ボタンで明示的に切り替えた場合の「強制ライト / ダーク」の上書き */
+    :root[data-theme="light"] {
+      --bg-color: #ffffff;
+      --chat-bg: #f8f9fa;
+      --text-color: #212529;
+      --border-color: #dee2e6;
+    }
+    :root[data-theme="dark"] {
       --bg-color: #1a1a1a;
       --chat-bg: #2d2d2d;
       --text-color: #ffffff;
-      --accent-color: #007bff;
       --border-color: #444444;
     }
+
+    /* =======================================================
+       📐 レイアウト・スタイル（変数を使うため変更なし・堅牢設計）
+       ======================================================= */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg-color);
@@ -21,28 +58,38 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      transition: background 0.3s, color 0.3s; /* 切り替えを滑らかに */
     }
     header {
       background: var(--chat-bg);
       padding: 1rem;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-weight: bold;
       font-size: 1.2rem;
       border-bottom: 1px solid var(--border-color);
     }
     
-    /* --- 🔍 デバッグ用ロードインジケーター --- */
-    /* 後で非表示にしたい場合は display: none; に書き換えるかコメントアウトしてください */
+    /* テーマ切り替えスイッチボタン */
+    .theme-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
     #status-container {
-      background: #332200;
-      color: #ffcc00;
+      background: rgba(255, 204, 0, 0.15);
+      color: var(--text-color);
       padding: 0.5rem 1rem;
       font-size: 0.85rem;
       font-family: monospace;
       border-bottom: 1px solid var(--border-color);
-      display: block; /* 消す時は none に変更 */
     }
-
     #chat-container {
       flex: 1;
       overflow-y: auto;
@@ -59,7 +106,8 @@
       word-break: break-word;
     }
     .user {
-      background: var(--accent-color);
+      background: var(--user-msg-bg);
+      color: var(--user-msg-text);
       align-self: flex-end;
     }
     .ai {
@@ -76,9 +124,9 @@
     }
     input[type="text"] {
       flex: 1;
-      background: #111;
+      background: var(--bg-color);
       border: 1px solid var(--border-color);
-      color: #fff;
+      color: var(--text-color);
       padding: 0.75rem;
       border-radius: 4px;
       font-size: 1rem;
@@ -87,7 +135,7 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
-    button {
+    #send-btn {
       background: var(--accent-color);
       color: #fff;
       border: none;
@@ -96,44 +144,37 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button:disabled {
+    #send-btn:disabled {
       opacity: 0.5;
     }
   </style>
 </head>
 <body>
 
-  <header>CHOIIZUKA-AI</header>
+  <header>
+    <span>CHOIIZUKA-AI</span>
+    <!-- 手動切り替えスイッチ（引き算設計：1つの関数で交互に入れ替え） -->
+    <button class="theme-toggle-btn" onclick="toggleThemeMode()">🌓 Mode</button>
+  </header>
 
-  <!-- 模型ロードの進行状況モニター -->
   <div id="status-container">🤖 System Status: Initializing environment...</div>
 
-  <!-- チャット履歴表示エリア -->
   <div id="chat-container">
     <div class="message ai">Welcome to CHOIIZUKA-AI. System is preparing the lightweight local intelligence.</div>
   </div>
 
-  <!-- 入力フォームエリア -->
   <div id="input-container">
     <input type="text" id="user-input" placeholder="Loading model, please wait..." disabled>
     <button id="send-btn" onclick="handleUserMessageFlow()" disabled>Send</button>
   </div>
 
-  <!-- 📦 公式サンプルの挙動を100%再現するためのES Moduleインポート -->
   <script type="module">
-    // Hugging Faceの公式CDNから最新のTransformers.jsを読み込む
     import { pipeline, env } from 'https://jsdelivr.net';
-
-    // タイムアウトやローカルキャッシュエラーを防ぐための公式標準のインフラ設定
-    env.allowLocalModels = false; // サーバーにモデルを置かない（CDNから安全にFetchする設定）
+    env.allowLocalModels = false;
 
     let generatorInstance = null;
-    const modelIdentifier = 'Xenova/Qwen1.5-0.5B-Chat'; // 動作実績の高い超軽量モデル（約40MBの量子化版）
+    const modelIdentifier = 'Xenova/distilgpt2';//'Xenova/Qwen1.5-0.5B-Chat';
 
-    /**
-     * ページ読み込み時に自動実行されるモデルの初期化処理
-     * 進行状況（progress）を1文字ずつ検知してインジケーターに流し込む
-     */
     async function initializeLocalModel() {
       const statusElement = document.getElementById('status-container');
       const inputElement = document.getElementById('user-input');
@@ -142,7 +183,6 @@
       try {
         statusElement.innerText = `🤖 Loading Model [${modelIdentifier}]... Fetching shards from CDN...`;
         
-        // 公式の progress_callback を使い、タイムアウトでフリーズするのを防ぐ
         generatorInstance = await pipeline('text-generation', modelIdentifier, {
           progress_callback: (data) => {
             if (data.status === 'progress') {
@@ -153,7 +193,6 @@
           }
         });
 
-        // ロード完了後にUIを安全に解放する
         statusElement.innerText = "🟢 System Status: Active (100% Local Inference Engine)";
         inputElement.disabled = false;
         buttonElement.disabled = false;
@@ -165,35 +204,25 @@
       }
     }
 
-    /**
-     * チャットの送信処理
-     * 生成パイプラインを非同期（async/await）で安全にキックする
-     */
     async function handleUserMessageFlow() {
       const inputElement = document.getElementById('user-input');
-      const chatContainer = document.getElementById('chat-container');
       const text = inputElement.value.trim();
       
       if (!text || !generatorInstance) return;
 
-      // ユーザーの入力を画面に描画
       appendMessageToWindow(text, 'user');
       inputElement.value = '';
 
-      // AIの思考中プレースホルダーを設置
       const aiResponseDiv = appendMessageToWindow('🤖 Thinking...', 'ai');
 
       try {
-        // パラメータを最小限に絞り込み、ブラウザのフリーズ（タイムアウト）を回避
         const responseData = await generatorInstance(text, {
           max_new_tokens: 120,
           temperature: 0.7,
           do_sample: true
         });
 
-        // 生成されたテキストを安全に抽出して置換
-        const generatedText = responseData[0].generated_text;
-        // 入力文章がそのまま返ってくるのを防ぐための簡易トリミング処理
+        const generatedText = responseData.generated_text;
         const cleanText = generatedText.replace(text, '').trim();
         
         aiResponseDiv.innerText = cleanText || "No response generated.";
@@ -202,23 +231,40 @@
       }
     }
 
-    /**
-     * メッセージ要素をDOMに動的に追加する共通処理
-     */
     function appendMessageToWindow(messageText, senderType) {
       const chatContainer = document.getElementById('chat-container');
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${senderType}`;
       msgDiv.innerText = messageText;
       chatContainer.appendChild(msgDiv);
-      chatContainer.scrollTop = chatContainer.scrollHeight; // 常に最下部へスクロール
+      chatContainer.scrollTop = chatContainer.scrollHeight;
       return msgDiv;
     }
 
-    // グローバルスコープに関数を紐付け（HTMLのonclickから叩けるようにする）
-    window.handleUserMessageFlow = handleUserMessageFlow;
+    /**
+     * 🌓 手動テーマ切り替えロジック
+     * HTMLタグの data-theme 属性を反転させるだけの極小実装（トラブル要因ゼロ）
+     */
+    function toggleThemeMode() {
+      const rootElement = document.documentElement;
+      const currentTheme = rootElement.getAttribute('data-theme');
+      
+      if (currentTheme === 'dark') {
+        rootElement.setAttribute('data-theme', 'light');
+      } else if (currentTheme === 'light') {
+        rootElement.setAttribute('data-theme', 'dark');
+      } else {
+        // 初回クリック時（OS自動判定の状態から手動に切り替える場合）
+        // 現在のOS設定がダークならライトに、ライトならダークに反転
+        const isOsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        rootElement.setAttribute('data-theme', isOsDark ? 'light' : 'dark');
+      }
+    }
 
-    // スクリプト読み込み完了と同時に初期化を実行
+    // 各関数をグローバルにバインド
+    window.handleUserMessageFlow = handleUserMessageFlow;
+    window.toggleThemeMode = toggleThemeMode;
+
     initializeLocalModel();
   </script>
 </body>
