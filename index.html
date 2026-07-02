@@ -37,7 +37,10 @@
   </div>
 
   <script type="module">
-    import { pipeline, env } from 'https://jsdelivr.net';
+    
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+    /*import { pipeline, env } from 'https://jsdelivr.net';*/
+    
     env.allowLocalModels = false;
     env.backends.onnx.wasm.wasmPaths = 'https://jsdelivr.net/dist/';
     env.backends.onnx.customOpLibraryPath = null;
@@ -46,8 +49,8 @@
     let generatorInstance = null;
     
     let watchdogTimer = null;
-    const WATCHDOG_TIMEOUT_MS = 300000; // 1分間進捗がなければ静かにタイムアウト判定
-    const RETRY_DELAY_MS = 60000;       // 10秒待って裏で静かにリトライ
+    const WATCHDOG_TIMEOUT_MS = 300000; // 5分間進捗がなければ静かにタイムアウト判定
+    const RETRY_DELAY_MS = 60000;       // 60秒待って裏で静かにリトライ
 
     function resetWatchdog() {
       if (watchdogTimer) clearTimeout(watchdogTimer);
