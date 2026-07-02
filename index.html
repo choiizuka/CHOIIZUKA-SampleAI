@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHOIIZUKA-AI</title>
   <style>
-    /* =======================================================
-       🎨 宇宙と知性をテーマにした、ノイズゼロの極小ミニマルデザイン
-       ======================================================= */
-    :root { --bg: #ffffff; --text: #212529; --chat-bg: #f8f9fa; --border: #dee2e6; }
+    :root { --bg: #ffffff; --text: #212529; --chat-bg: #f8f9fa; --border: #dee2e6; --accent: #007bff; }
     @media (prefers-color-scheme: dark) { :root { --bg: #111111; --text: #ffffff; --chat-bg: #1a1a1a; --border: #333333; } }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
     header { padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.1rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
@@ -16,16 +13,19 @@
     #chat-container { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1rem; }
     .message { max-width: 80%; padding: 0.75rem 1.2rem; border-radius: 12px; line-height: 1.6; font-size: 0.95rem; }
     .ai { background: var(--chat-bg); align-self: flex-start; border: 1px solid var(--border); }
+    .user { background: var(--accent); color: #fff; align-self: flex-end; }
     #input-container { padding: 1.5rem; background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
     input[type="text"] { flex: 1; background: var(--chat-bg); border: 1px solid var(--border); color: var(--text); padding: 0.8rem 1rem; border-radius: 6px; font-size: 1rem; outline: none; }
     input[type="text"]:disabled { opacity: 0.3; cursor: not-allowed; }
+    button { background: var(--accent); color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
   <header>CHOIIZUKA-AI</header>
 
-  <!-- 🌌 ジョブズ仕様：無駄な数値やエラーを見せず、世界の美しさだけを提示するインジケーター -->
+  <!-- 🌌 進行中の状態表示エリア -->
   <div id="status-container">Connecting to the Cosmic Intelligence Network...</div>
 
   <div id="chat-container">
@@ -34,78 +34,101 @@
 
   <div id="input-container">
     <input type="text" id="user-input" placeholder="Preparing the brain..." disabled>
+    <button id="send-btn" onclick="handleUserMessageFlow()" disabled>Send</button>
   </div>
 
+  <!-- 📦 Claudeのデバッグに基づいた最新の公式移管URL -->
   <script type="module">
-    
-    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
-    /*import { pipeline, env } from 'https://jsdelivr.net';*/
+    import { pipeline, env } from 'https://jsdelivr.net';
     
     env.allowLocalModels = false;
-    env.backends.onnx.wasm.wasmPaths = 'https://jsdelivr.net/dist/';
     env.backends.onnx.customOpLibraryPath = null;
+    // env.backends.onnx.wasm.wasmPaths はデフォルトの自動設定に委ねるため削る（引き算）
 
-    const modelIdentifier = 'Xenova/distilgpt2'; // 35MB級・英語特化最軽量モデル
+    const modelIdentifier = 'Xenova/distilgpt2'; // 35MB級・英語特化最軽量定番モデル
     let generatorInstance = null;
-    
-    let watchdogTimer = null;
-    const WATCHDOG_TIMEOUT_MS = 300000; // 5分間進捗がなければ静かにタイムアウト判定
-    const RETRY_DELAY_MS = 60000;       // 60秒待って裏で静かにリトライ
-
-    function resetWatchdog() {
-      if (watchdogTimer) clearTimeout(watchdogTimer);
-      watchdogTimer = setTimeout(() => {
-        handleLoadTimeoutSilently();
-      }, WATCHDOG_TIMEOUT_MS);
-    }
 
     /**
-     * 🤫 ユーザーに悟られず、裏で静かに再接続を試みるリトライ回路
+     * 🚀 モデルロード処理
+     * 5手先（無限ループ）を断ち切る、シンプル一発勝負設計
      */
-    function handleLoadTimeoutSilently() {
-      if (watchdogTimer) clearTimeout(watchdogTimer);
-      
-      // ジョブズ激怒の「ダサいカウントダウン」や「エラー表示」を完全消去。
-      // あたかも「宇宙の大きな波を待っているだけ」のような静かな表示を維持します。
-      document.getElementById('status-container').innerText = "Syncing with intelligence network nodes...";
-
-      setTimeout(() => {
-        initializeLocalModelWithRetry();
-      }, RETRY_DELAY_MS);
-    }
-
-    async function initializeLocalModelWithRetry() {
+    async function initializeLocalModel() {
       const statusElement = document.getElementById('status-container');
       const inputElement = document.getElementById('user-input');
-
-      if (watchdogTimer) clearTimeout(watchdogTimer);
+      const buttonElement = document.getElementById('send-btn');
 
       try {
-        resetWatchdog();
+        // ロード開始時：ユーザーを不安にさせない静かな表現
+        statusElement.innerText = "Downloading intelligent shards smoothly...";
 
         generatorInstance = await pipeline('text-generation', modelIdentifier, {
           progress_callback: (data) => {
+            // ガタガタ動く進捗％は「ジョブズに怒られる」ため非表示（テキスト固定）
             if (data.status === 'progress') {
-              resetWatchdog();
-              // ％の数値をガタガタ表示させるのをやめ、滑らかなテキスト表現のみに固定（引き算の極み）
               statusElement.innerText = "Downloading intelligent shards smoothly...";
             }
           }
         });
 
-        // 成功した瞬間、一瞬で「🟢 Active」へ昇華
-        clearTimeout(watchdogTimer);
+        // 成功時：一瞬でActiveに昇華
         statusElement.innerText = "🟢 System Status: Active";
         inputElement.disabled = false;
+        buttonElement.disabled = false;
         inputElement.placeholder = "Type your message here...";
         
       } catch (error) {
-        // エラーを吐いてコケても、画面を赤く汚さず、静かにリトライにフォワード
-        handleLoadTimeoutSilently();
+        // 🔴 【最新UX仕様：一度だけ誠実にお知らせする】
+        // 無限リトライでハメ殺しにせず、美学に沿った静かなトーンで事実を開示し、コントロールを人間に返す
+        console.error("Critical connection failure:", error);
+        statusElement.innerText = "接続がうまくいかなかったみたい。少し時間を置いてもう一度試してみてね。礼";
       }
     }
 
-    initializeLocalModelWithRetry();
+    /**
+     * チャット送受信処理
+     */
+    async function handleUserMessageFlow() {
+      const inputElement = document.getElementById('user-input');
+      const text = inputElement.value.trim();
+      
+      if (!text || !generatorInstance) return;
+
+      appendMessageToWindow(text, 'user');
+      inputElement.value = '';
+
+      const aiResponseDiv = appendMessageToWindow('Thinking...', 'ai');
+
+      try {
+        const responseData = await generatorInstance(text, {
+          max_new_tokens: 50, // 処理スピード最優先の引き算
+          temperature: 0.7,
+          do_sample: true
+        });
+
+        const generatedText = responseData[0].generated_text; // v4系の戻り値構造（配列）に最適化
+        const cleanText = generatedText.replace(text, '').trim();
+        
+        aiResponseDiv.innerText = cleanText || "No response generated.";
+      } catch (error) {
+        aiResponseDiv.innerText = `⚠️ Inference Error: ${error.message}`;
+      }
+    }
+
+    function appendMessageToWindow(messageText, senderType) {
+      const chatContainer = document.getElementById('chat-container');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${senderType}`;
+      msgDiv.innerText = messageText;
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return msgDiv;
+    }
+
+    // グローバルスコープへのバインド
+    window.handleUserMessageFlow = handleUserMessageFlow;
+
+    // 起動
+    initializeLocalModel();
   </script>
 </body>
 </html>
