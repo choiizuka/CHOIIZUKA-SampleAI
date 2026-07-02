@@ -46,8 +46,8 @@
     let generatorInstance = null;
     
     let watchdogTimer = null;
-    const WATCHDOG_TIMEOUT_MS = 60000; // 1分間進捗がなければ静かにタイムアウト判定
-    const RETRY_DELAY_MS = 10000;       // 10秒待って裏で静かにリトライ
+    const WATCHDOG_TIMEOUT_MS = 300000; // 1分間進捗がなければ静かにタイムアウト判定
+    const RETRY_DELAY_MS = 60000;       // 10秒待って裏で静かにリトライ
 
     function resetWatchdog() {
       if (watchdogTimer) clearTimeout(watchdogTimer);
